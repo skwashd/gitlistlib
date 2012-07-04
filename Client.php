@@ -4,8 +4,9 @@ namespace Git;
 
 class Client
 {
-    protected $app;
     protected $path;
+    protected $git_environment;
+    protected $shell_environment;
 
     /**
      * Constructor
@@ -15,6 +16,8 @@ class Client
     public function __construct($client_path)
     {
         $this->setPath($client_path);
+        $this->git_environment = new GitEnvironment();
+        $this->shell_environment = new ShellEnvironment();
     }
 
     /**
@@ -41,15 +44,38 @@ class Client
      */
     public function getRepository($path)
     {
-        if (!file_exists($path) || !file_exists($path . '/.git/HEAD') && !file_exists($path . '/HEAD')) {
-            throw new \RuntimeException('There is no GIT repository at ' . $path);
+        $path = '/' . trim($path, '/');
+        if (!file_exists($path)) {
+            throw new \RuntimeException("Path '$path' does not exist");
         }
 
-        if (in_array($path, $this->app['hidden'])) {
-            throw new \RuntimeException('You don\'t have access to this repository');
+        $search_path = $path;
+        // Traverse up the directory tree until we reach the root dir, or we find a git repository.
+        while (!$this->pathContainsRepository($search_path) && $search_path != '') {
+            $search_path = rtrim(dirname($search_path), '/');
         }
 
-        return new Repository($path, $this);
+        if (!$this->pathContainsRepository($search_path)) {
+           throw new \RuntimeException('There is no GIT repository at ' . $path);
+        }
+
+        // This check for hidden repos should be conducted elsewhere.
+        // if (in_array($search_path, $this->app['hidden'])) {
+        //  throw new \RuntimeException('You don\'t have access to this repository');
+        // }
+
+        return new Repository($search_path, $this);
+    }
+
+    /**
+     * Looks for git repository in the given path.
+     *
+     * @return bool
+     *  Whether the path contains a git repository.
+     */
+    protected function pathContainsRepository($path)
+    {
+        return file_exists($path . '/.git/HEAD') || file_exists($path . '/HEAD');
     }
 
     /**
@@ -90,9 +116,10 @@ class Client
             $isRepository = file_exists($file->getPathname() . '/.git/HEAD');
 
             if ($file->isDir() && $isRepository || $isBare) {
-                if (in_array($file->getPathname(), $this->app['hidden'])) {
-                    continue;
-                }
+                // This check for hidden repos should be conducted elsewhere.
+                // if (in_array($file->getPathname(), $this->app['hidden'])) {
+                //     continue;
+                // }
 
                 if ($isBare) {
                     $description = $file->getPathname() . '/description';
@@ -125,27 +152,92 @@ class Client
      * @param string $command Git command to be run
      * @return string Returns the command output
      */
-    public function run(Repository $repository, $command)
+    public function run(Repository $repository, $command, $options = array(), $args = array())
     {
         $descriptors = array(0 => array("pipe", "r"), 1 => array("pipe", "w"), 2 => array("pipe", "w"));
-        $process = proc_open($this->getPath() . ' ' . $command, $descriptors, $pipes, $repository->getPath());
+        $prepared_command = $this->prepareCommand($command, $options, $args);
+        $shell_env = $this->getShellEnvironment()->getAll() ?: NULL;
+        $process = proc_open($prepared_command, $descriptors, $pipes, $repository->getPath(), $shell_env);
 
         if (!is_resource($process)) {
-            throw new \RuntimeException('Unable to execute command: ' . $command);
+            throw new \RuntimeException('Unable to execute command: ' . $prepared_command);
         }
-        
-        $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[2]);
-        
-        if (!empty($stderr)) {
-            throw new \RuntimeException($stderr);
-        }
-        
-        $stdout = stream_get_contents($pipes[1]);
-        fclose($pipes[1]);
 
+        $stderr = stream_get_contents($pipes[2]);
+        $stdout = stream_get_contents($pipes[1]);
+
+        $status = proc_get_status($process);
+        $exit = $status['exitcode'];
+
+        fclose($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[0]);
         proc_close($process);
+
+        if (0 !== $exit) {
+            throw new \RuntimeException($stderr, $exit);
+        }
+
         return $stdout;
+    }
+
+    /**
+     * Returns the client's git Environment.
+     *
+     * @return Environment
+     *  The client's git Environment object.
+     */
+    public function getGitEnvironment()
+    {
+        return $this->git_environment;
+    }
+
+    /**
+     * Returns the client's git Environment.
+     *
+     * @return Environment
+     *  The client's git Environment object.
+     */
+    public function getShellEnvironment()
+    {
+        return $this->shell_environment;
+    }
+
+    /**
+     * Prepares a command for execution. Prepends any Environment variables.
+     *
+     * @return string
+     *  The prepared command.
+     */
+    protected function prepareCommand($command, array $options, array $args)
+    {
+        $command_parts = array();
+
+        $env = $this->getGitEnvironment();
+        if ($env->count() > 0) {
+            $command_parts[] = (string) $env;
+        }
+
+        $command_parts[] = $this->getPath();
+        $command_parts[] = $command;
+
+        if (count($options) > 0) {
+            $options_items = array();
+            foreach ($options as $name => $value) {
+                $options_item = $name;
+                if (!is_null($value)) {
+                    $options_item .= ' ' . escapeshellarg($value);
+                }
+                $options_items[] = $options_item;
+            }
+            $command_parts[] = implode(' ', $options_items);
+        }
+
+        if (count($args) > 0) {
+            $command_parts[] = implode(' ', array_map('escapeshellarg', $args));
+        }
+
+        return implode(' ', $command_parts);
     }
 
     /**
@@ -167,4 +259,5 @@ class Client
     {
         $this->path = $path;
     }
+
 }

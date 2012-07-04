@@ -84,13 +84,15 @@ class Repository
      * @access public
      * @param string $message Description of the changes made
      */
-    public function commit($message)
+    public function commit($message, $options = array(), $args = array())
     {
-        $this->getClient()->run($this, "commit -m '$message'");
+        $options['-m'] = $message;
+
+        $this->getClient()->run($this, 'commit', $options, $args);
 
         return $this;
     }
-    
+
     /**
      * Checkout a branch
      * 
@@ -139,7 +141,38 @@ class Repository
 
         return $this;
     }
-    
+
+    /**
+     * List a repository's remotes.
+     *
+     * @return array
+     *  The repository's remotes.
+     */
+    public function remoteList($only_push = TRUE)
+    {
+        $options = array('-v' => NULL);
+        $args = array();
+
+        $output = $this->getClient()->run($this, 'remote', $options, $args);
+        $out = explode(PHP_EOL, $output);
+
+        $remotes = array();
+        foreach ($out as $line) {
+          $m = array();
+          if (!preg_match('/^(.+)\s(.+) \((push|fetch)\)$/', $line, $m)) {
+            continue;
+          }
+          if ($only_push) {
+            if (count($m) != 4 || 'push' !== $m[3]) {
+              continue;
+            }
+          }
+          $remotes[$m[1]] = $m[2];
+        }
+
+        return $remotes;
+    }
+
     /**
      * Show a list of the repository branches
      * 
