@@ -175,7 +175,7 @@ class Client
         proc_close($process);
 
         if (0 !== $exit) {
-            throw new \RuntimeException($stderr, $exit);
+            throw new \RuntimeException($stderr ?: $stdout, $exit);
         }
 
         return $stdout;
