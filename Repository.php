@@ -127,17 +127,18 @@ class Repository
      */
     public function push($repository = null, $refspec = null)
     {
-        $command = "push";
-        
+        $options = array();
+        $args = array();
+
         if($repository) {
-            $command .= " $repository";
-        } 
-        
-        if($refspec) {
-            $command .= " $refspec";
+            $args[] = $repository;
         }
-        
-        $this->getClient()->run($this, $command);
+
+        if($refspec) {
+            $args[] = $refspec;
+        }
+
+        $this->getClient()->run($this, 'push', $options, $args);
 
         return $this;
     }
