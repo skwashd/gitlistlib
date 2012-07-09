@@ -68,6 +68,23 @@ class Client
     }
 
     /**
+     * Clones a repository to a given path.
+     *
+     * @param string $url The URL of the repo to clone
+     * @param string $path The file system path to which the repo should be cloned
+     * @param array $options optional set of options to git.
+     * @param array $args optional set of arguments to git.
+     */
+    public function cloneRepository($url, $directory, array $options = array(), array $args = array())
+    {
+        $repository = new Repository($directory, $this);
+        array_unshift($args, $url, $directory);
+
+        $this->run($repository, 'clone', $options, $args);
+        return $repository;
+    }
+
+    /**
      * Looks for git repository in the given path.
      *
      * @return bool
