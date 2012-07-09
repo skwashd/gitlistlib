@@ -200,6 +200,25 @@ class Client
     }
 
     /**
+     * Sets the password that will be used with the private key when communicating over SSH.
+     *
+     * @param string $password The password to use.
+     */
+    public function setSSHPassword($password)
+    {
+        if (empty($password)) {
+            $this->getShellEnvironment()->clearAll(array('SSH_ASKPASS', 'DISPLAY', 'SSH_PASS'));
+        }
+        else {
+            $this->getShellEnvironment()->setAll(array(
+                'SSH_ASKPASS' => __DIR__ . '/script/ssh-echopass',
+                'DISPLAY' => 'hack',
+                'SSH_PASS' => $password,
+            ));
+        }
+    }
+
+    /**
      * Returns the client's git Environment.
      *
      * @return Environment
