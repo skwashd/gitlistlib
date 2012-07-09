@@ -173,7 +173,8 @@ class Client
     {
         $descriptors = array(0 => array("pipe", "r"), 1 => array("pipe", "w"), 2 => array("pipe", "w"));
         $prepared_command = $this->prepareCommand($command, $options, $args);
-        $shell_env = $this->getShellEnvironment()->getAll() ?: NULL;
+        $shell_env = $this->getShellEnvironment()->getAll() ?: array();
+        $shell_env += $this->getGitEnvironment()->getAll() ?: array();
         $process = proc_open($prepared_command, $descriptors, $pipes, $repository->getPath(), $shell_env);
 
         if (!is_resource($process)) {
@@ -229,11 +230,6 @@ class Client
     protected function prepareCommand($command, array $options, array $args)
     {
         $command_parts = array();
-
-        $env = $this->getGitEnvironment();
-        if ($env->count() > 0) {
-            $command_parts[] = (string) $env;
-        }
 
         $command_parts[] = $this->getPath();
         $command_parts[] = $command;
