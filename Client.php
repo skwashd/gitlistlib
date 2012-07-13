@@ -193,27 +193,27 @@ class Client
         proc_close($process);
 
         if (0 !== $exit) {
-            throw new \RuntimeException($stderr ?: $stdout, $exit);
+            throw new \RuntimeException("Error running command $prepared_command\n" . ($stderr ?: $stdout), $exit);
         }
 
         return $stdout;
     }
 
     /**
-     * Sets the password that will be used with the private key when communicating over SSH.
+     * Sets the passphrase that will be used with the private key when communicating over SSH.
      *
-     * @param string $password The password to use.
+     * @param string $passphrase The password to use.
      */
-    public function setSSHPassword($password)
+    public function setSSHPassphrase($passphrase)
     {
-        if (empty($password)) {
+        if (empty($passphrase)) {
             $this->getShellEnvironment()->clearAll(array('SSH_ASKPASS', 'DISPLAY', 'SSH_PASS'));
         }
         else {
             $this->getShellEnvironment()->setAll(array(
                 'SSH_ASKPASS' => __DIR__ . '/script/ssh-echopass',
                 'DISPLAY' => 'hack',
-                'SSH_PASS' => $password,
+                'SSH_PASS' => $passphrase,
             ));
         }
     }
