@@ -203,6 +203,16 @@ class Repository
     }
 
     /**
+     * Simply returns the output of git status.
+     *
+     * @return bool
+     */
+    public function hasStagedChanges()
+    {
+        return stripos($this->getClient()->run($this, 'status'), 'Changes to be committed') === FALSE;
+    }
+
+    /**
      * Show a list of the repository branches
      * 
      * @access public
