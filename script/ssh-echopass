@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+# Echos the ssh passphrase when passed via environment variable SSH_PASS.
+# This should only be used with the features_git module for Drupal.
+#
+echo "$SSH_PASS"

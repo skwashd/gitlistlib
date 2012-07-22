@@ -81,14 +81,34 @@ class Repository
     }
 
     /**
+     * Removes specified files.
+     *
+     * @param string|array The files to remove.
+     * @return Git\Repository
+     */
+    public function remove($files) {
+        if (empty($files)) {
+          return $this;
+        }
+
+        $options = array();
+        $args = is_array($files) ? $files : explode(' ', $files);
+
+        $this->getClient()->run($this, "rm", $options, $args);
+        return $this;
+    }
+
+    /**
      * Commit changes to the repository
      *
      * @access public
      * @param string $message Description of the changes made
      */
-    public function commit($message)
+    public function commit($message, $options = array(), $args = array())
     {
-        $this->getClient()->run($this, "commit -m '$message'");
+        $options['-m'] = $message;
+
+        $this->getClient()->run($this, 'commit', $options, $args);
 
         return $this;
     }
@@ -127,19 +147,71 @@ class Repository
      */
     public function push($repository = null, $refspec = null)
     {
-        $command = "push";
+        $options = array();
+        $args = array();
 
-        if ($repository) {
-            $command .= " $repository";
+        if($repository) {
+            $args[] = $repository;
         }
 
-        if ($refspec) {
-            $command .= " $refspec";
+        if($refspec) {
+            $args[] = $refspec;
         }
 
-        $this->getClient()->run($this, $command);
+        $this->getClient()->run($this, 'push', $options, $args);
 
         return $this;
+    }
+
+    /**
+     * List a repository's remotes.
+     *
+     * @return array
+     *  The repository's remotes.
+     */
+    public function remoteList($only_push = TRUE)
+    {
+        $options = array('-v' => NULL);
+        $args = array();
+
+        $output = $this->getClient()->run($this, 'remote', $options, $args);
+        $out = explode(PHP_EOL, $output);
+
+        $remotes = array();
+        foreach ($out as $line) {
+          $m = array();
+          if (!preg_match('/^(.+)\s(.+) \((push|fetch)\)$/', $line, $m)) {
+            continue;
+          }
+          if ($only_push) {
+            if (count($m) != 4 || 'push' !== $m[3]) {
+              continue;
+            }
+          }
+          $remotes[$m[1]] = $m[2];
+        }
+
+        return $remotes;
+    }
+
+    /**
+     * Simply returns the output of git status.
+     *
+     * @return string status
+     */
+    public function hasChanges()
+    {
+        return stripos($this->getClient()->run($this, 'status'), 'nothing to commit') === FALSE;
+    }
+
+    /**
+     * Simply returns the output of git status.
+     *
+     * @return bool
+     */
+    public function hasStagedChanges()
+    {
+        return stripos($this->getClient()->run($this, 'status'), 'Changes to be committed') === FALSE;
     }
 
     /**

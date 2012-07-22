@@ -8,11 +8,15 @@ class Client
 {
     protected $path;
     protected $hidden;
+    protected $git_environment;
+    protected $shell_environment;
 
     public function __construct($options = null)
     {
         $this->setPath($options['path']);
         $this->setHidden($options['hidden']);
+        $this->git_environment = new GitEnvironment();
+        $this->shell_environment = new ShellEnvironment();
     }
 
     /**
@@ -40,15 +44,59 @@ class Client
      */
     public function getRepository($path)
     {
-        if (!file_exists($path) || !file_exists($path . '/.git/HEAD') && !file_exists($path . '/HEAD')) {
-            throw new \RuntimeException('There is no GIT repository at ' . $path);
+        $path = '/' . trim($path, '/');
+        if (!file_exists($path)) {
+            throw new \RuntimeException("Path '$path' does not exist");
         }
 
         if (in_array($path, $this->getHidden())) {
             throw new \RuntimeException('You don\'t have access to this repository');
         }
 
-        return new Repository($path, $this);
+        $search_path = $path;
+        // Traverse up the directory tree until we reach the root dir, or we find a git repository.
+        while (!$this->pathContainsRepository($search_path) && $search_path != '') {
+            $search_path = rtrim(dirname($search_path), '/');
+        }
+
+        if (!$this->pathContainsRepository($search_path)) {
+           throw new \RuntimeException('There is no GIT repository at ' . $path);
+        }
+
+        // This check for hidden repos should be conducted elsewhere.
+        // if (in_array($search_path, $this->app['hidden'])) {
+        //  throw new \RuntimeException('You don\'t have access to this repository');
+        // }
+
+        return new Repository($search_path, $this);
+    }
+
+    /**
+     * Clones a repository to a given path.
+     *
+     * @param string $url The URL of the repo to clone
+     * @param string $path The file system path to which the repo should be cloned
+     * @param array $options optional set of options to git.
+     * @param array $args optional set of arguments to git.
+     */
+    public function cloneRepository($url, $directory, array $options = array(), array $args = array())
+    {
+        $repository = new Repository($directory, $this);
+        array_unshift($args, $url, $directory);
+
+        $this->run($repository, 'clone', $options, $args);
+        return $repository;
+    }
+
+    /**
+     * Looks for git repository in the given path.
+     *
+     * @return bool
+     *  Whether the path contains a git repository.
+     */
+    protected function pathContainsRepository($path)
+    {
+        return file_exists($path . '/.git/HEAD') || file_exists($path . '/HEAD');
     }
 
     /**
@@ -126,28 +174,107 @@ class Client
      * @param  string     $command    Git command to be run
      * @return string     Returns the command output
      */
-    public function run(Repository $repository, $command)
+    public function run(Repository $repository, $command, $options = array(), $args = array())
     {
         $descriptors = array(0 => array("pipe", "r"), 1 => array("pipe", "w"), 2 => array("pipe", "w"));
-        $process = proc_open($this->getPath() . ' ' . $command, $descriptors, $pipes, $repository->getPath());
+        $prepared_command = $this->prepareCommand($command, $options, $args);
+        $shell_env = $this->getShellEnvironment()->getAll() ?: array();
+        $shell_env += $this->getGitEnvironment()->getAll() ?: array();
+        $process = proc_open($prepared_command, $descriptors, $pipes, $repository->getPath(), $shell_env);
 
         if (!is_resource($process)) {
-            throw new \RuntimeException('Unable to execute command: ' . $command);
+            throw new \RuntimeException('Unable to execute command: ' . $prepared_command);
         }
 
         $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[2]);
-
-        if (!empty($stderr)) {
-            throw new \RuntimeException($stderr);
-        }
-
         $stdout = stream_get_contents($pipes[1]);
-        fclose($pipes[1]);
 
+        $status = proc_get_status($process);
+        $exit = $status['exitcode'];
+
+        fclose($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[0]);
         proc_close($process);
 
+        if (0 !== $exit) {
+            throw new \RuntimeException("Error running command $prepared_command\n" . ($stderr ?: $stdout), $exit);
+        }
+
         return $stdout;
+    }
+
+    /**
+     * Sets the passphrase that will be used with the private key when communicating over SSH.
+     *
+     * @param string $passphrase The password to use.
+     */
+    public function setSSHPassphrase($passphrase)
+    {
+        if (empty($passphrase)) {
+            $this->getShellEnvironment()->clearAll(array('SSH_ASKPASS', 'DISPLAY', 'SSH_PASS'));
+        }
+        else {
+            $this->getShellEnvironment()->setAll(array(
+                'SSH_ASKPASS' => __DIR__ . '/script/ssh-echopass',
+                'DISPLAY' => 'hack',
+                'SSH_PASS' => $passphrase,
+            ));
+        }
+    }
+
+    /**
+     * Returns the client's git Environment.
+     *
+     * @return Environment
+     *  The client's git Environment object.
+     */
+    public function getGitEnvironment()
+    {
+        return $this->git_environment;
+    }
+
+    /**
+     * Returns the client's git Environment.
+     *
+     * @return Environment
+     *  The client's git Environment object.
+     */
+    public function getShellEnvironment()
+    {
+        return $this->shell_environment;
+    }
+
+    /**
+     * Prepares a command for execution. Prepends any Environment variables.
+     *
+     * @return string
+     *  The prepared command.
+     */
+    protected function prepareCommand($command, array $options, array $args)
+    {
+        $command_parts = array();
+
+        $command_parts[] = $this->getPath();
+        $command_parts[] = $command;
+
+        if (count($options) > 0) {
+            $options_items = array();
+            foreach ($options as $name => $value) {
+                $options_item = $name;
+                if (!is_null($value)) {
+                    $options_item .= ' ' . escapeshellarg($value);
+                }
+                $options_items[] = $options_item;
+            }
+            $command_parts[] = implode(' ', $options_items);
+        }
+
+        if (count($args) > 0) {
+            $command_parts[] = implode(' ', array_map('escapeshellarg', $args));
+        }
+
+        return implode(' ', $command_parts);
     }
 
     /**
