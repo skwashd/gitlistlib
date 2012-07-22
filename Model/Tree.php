@@ -1,10 +1,10 @@
 <?php
 
-namespace Git\Model;
+namespace GitList\Component\Git\Model;
 
-use Git\Client;
-use Git\Repository;
-use Git\ScopeAware;
+use GitList\Component\Git\Client;
+use GitList\Component\Git\Repository;
+use GitList\Component\Git\ScopeAware;
 
 class Tree extends ScopeAware implements \RecursiveIterator
 {
@@ -13,8 +13,9 @@ class Tree extends ScopeAware implements \RecursiveIterator
     protected $name;
     protected $data;
     protected $position = 0;
-    
-    public function __construct($hash, Client $client, Repository $repository) {
+
+    public function __construct($hash, Client $client, Repository $repository)
+    {
         $this->setClient($client);
         $this->setRepository($repository);
         $this->setHash($hash);
@@ -111,32 +112,39 @@ class Tree extends ScopeAware implements \RecursiveIterator
 
         return $files;
     }
-    
-    public function valid() {
+
+    public function valid()
+    {
         return isset($this->data[$this->position]);
     }
-    
-    public function hasChildren() {
+
+    public function hasChildren()
+    {
         return is_array($this->data[$this->position]);
     }
-    
-    public function next() {
+
+    public function next()
+    {
         $this->position++;
     }
-    
-    public function current() {
+
+    public function current()
+    {
         return $this->data[$this->position];
     }
-    
-    public function getChildren() {
+
+    public function getChildren()
+    {
         return $this->data[$this->position];
     }
-    
-    public function rewind() {
+
+    public function rewind()
+    {
         $this->position = 0;
     }
-    
-    public function key() {
+
+    public function key()
+    {
         return $this->position;
     }
 

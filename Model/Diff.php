@@ -1,8 +1,8 @@
 <?php
 
-namespace Git\Model;
+namespace GitList\Component\Git\Model;
 
-use Git\Model\Line;
+use GitList\Component\Git\Model\DiffLine;
 
 class Diff
 {
@@ -12,9 +12,9 @@ class Diff
     protected $new;
     protected $file;
 
-    public function addLine($line)
+    public function addLine($line, $oldNo, $newNo)
     {
-        $this->lines[] = new Line($line);
+        $this->lines[] = new DiffLine($line, $oldNo, $newNo);
     }
 
     public function getLines()

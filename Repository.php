@@ -1,11 +1,12 @@
 <?php
 
-namespace Git;
+namespace GitList\Component\Git;
 
-use Git\Commit\Commit;
-use Git\Model\Tree;
-use Git\Model\Blob;
-use Git\Model\Diff;
+use GitList\Component\Git\Commit\Commit;
+use GitList\Component\Git\Model\Tree;
+use GitList\Component\Git\Model\Blob;
+use GitList\Component\Git\Model\Diff;
+use Symfony\Component\Filesystem\Filesystem;
 
 class Repository
 {
@@ -39,6 +40,7 @@ class Repository
     public function getConfig($key)
     {
         $key = $this->getClient()->run($this, 'config ' . $key);
+
         return trim($key);
     }
 
@@ -48,19 +50,19 @@ class Repository
 
         return $this;
     }
-    
+
     /**
      * Add untracked files
-     * 
+     *
      * @access public
      * @param mixed $files Files to be added to the repository
      */
     public function add($files = '.')
     {
-        if(is_array($files)) {
+        if (is_array($files)) {
             $files = implode(' ', $files);
         }
-        
+
         $this->getClient()->run($this, "add $files");
 
         return $this;
@@ -68,7 +70,7 @@ class Repository
 
     /**
      * Add all untracked files
-     * 
+     *
      * @access public
      */
     public function addAll()
@@ -77,10 +79,10 @@ class Repository
 
         return $this;
     }
-    
+
     /**
      * Commit changes to the repository
-     * 
+     *
      * @access public
      * @param string $message Description of the changes made
      */
@@ -90,10 +92,10 @@ class Repository
 
         return $this;
     }
-    
+
     /**
      * Checkout a branch
-     * 
+     *
      * @access public
      * @param string $branch Branch to be checked out
      */
@@ -106,7 +108,7 @@ class Repository
 
     /**
      * Pull repository changes
-     * 
+     *
      * @access public
      */
     public function pull()
@@ -115,34 +117,34 @@ class Repository
 
         return $this;
     }
-    
+
     /**
      * Update remote references
-     * 
+     *
      * @access public
      * @param string $repository Repository to be pushed
-     * @param string $refspec Refspec for the push
+     * @param string $refspec    Refspec for the push
      */
     public function push($repository = null, $refspec = null)
     {
         $command = "push";
-        
-        if($repository) {
+
+        if ($repository) {
             $command .= " $repository";
-        } 
-        
-        if($refspec) {
+        }
+
+        if ($refspec) {
             $command .= " $refspec";
         }
-        
+
         $this->getClient()->run($this, $command);
 
         return $this;
     }
-    
+
     /**
      * Show a list of the repository branches
-     * 
+     *
      * @access public
      * @return array List of branches
      */
@@ -151,13 +153,13 @@ class Repository
         $branches = $this->getClient()->run($this, "branch");
         $branches = explode("\n", $branches);
         $branches = array_filter(preg_replace('/[\*\s]/', '', $branches));
-        
+
         return $branches;
     }
-    
+
     /**
      * Show the current repository branch
-     * 
+     *
      * @access public
      * @return string Current repository branch
      */
@@ -165,31 +167,32 @@ class Repository
     {
         $branches = $this->getClient()->run($this, "branch");
         $branches = explode("\n", $branches);
-        
-        foreach($branches as $branch) {
-            if($branch[0] == '*') {
+
+        foreach ($branches as $branch) {
+            if ($branch[0] == '*') {
                 return substr($branch, 2);
             }
         }
     }
-    
+
     /**
      * Check if a specified branch exists
-     * 
+     *
      * @access public
-     * @param string $branch Branch to be checked
+     * @param  string  $branch Branch to be checked
      * @return boolean True if the branch exists
      */
     public function hasBranch($branch)
     {
         $branches = $this->getBranches();
         $status = in_array($branch, $branches);
+
         return $status;
     }
 
     /**
      * Create a new repository branch
-     * 
+     *
      * @access public
      * @param string $branch Branch name
      */
@@ -197,10 +200,10 @@ class Repository
     {
         $this->getClient()->run($this, "branch $branch");
     }
-    
+
     /**
      * Show a list of the repository tags
-     * 
+     *
      * @access public
      * @return array List of tags
      */
@@ -212,20 +215,20 @@ class Repository
         if (empty($tags[0])) {
             return NULL;
         }
-        
+
         return $tags;
     }
 
     /**
      * Show the amount of commits on the repository
-     * 
+     *
      * @access public
      * @return integer Total number of commits
      */
     public function getTotalCommits($file = null)
     {
         $command = "rev-list --all";
-        
+
         if ($file) {
             $command .= " $file";
         }
@@ -233,12 +236,13 @@ class Repository
         $command .= " | wc -l";
 
         $commits = $this->getClient()->run($this, $command);
+
         return $commits;
     }
-    
+
     /**
      * Show the repository commit log
-     * 
+     *
      * @access public
      * @return array Commit log
      */
@@ -247,7 +251,7 @@ class Repository
         $page = 15 * $page;
         $pager = "--skip=$page --max-count=15";
         $command = 'log ' . $pager . ' --pretty=format:\'"%h": {"hash": "%H", "short_hash": "%h", "tree": "%T", "parent": "%P", "author": "%an", "author_email": "%ae", "date": "%at", "commiter": "%cn", "commiter_email": "%ce", "commiter_date": "%ct", "message": "%f"}\'';
-        
+
         if ($file) {
             $command .= " $file";
         }
@@ -316,9 +320,9 @@ class Repository
         return $commits;
     }
 
-    public function getCommit($commit)
+    public function getCommit($commitHash)
     {
-        $logs = $this->getClient()->run($this, 'show --pretty=format:\'{"hash": "%H", "short_hash": "%h", "tree": "%T", "parent": "%P", "author": "%an", "author_email": "%ae", "date": "%at", "commiter": "%cn", "commiter_email": "%ce", "commiter_date": "%ct", "message": "%f"}\' ' . $commit);
+        $logs = $this->getClient()->run($this, 'show --pretty=format:\'{"hash": "%H", "short_hash": "%h", "tree": "%T", "parent": "%P", "author": "%an", "author_email": "%ae", "date": "%at", "commiter": "%cn", "commiter_email": "%ce", "commiter_date": "%ct", "message": "%f"}\' ' . $commitHash);
 
         if (empty($logs)) {
             throw new \RuntimeException('No commit log available');
@@ -334,28 +338,12 @@ class Repository
         unset($logs[0]);
 
         if (empty($logs[1])) {
-            throw new \RuntimeException('No commit log available');
+            $logs = explode("\n", $this->getClient()->run($this, 'diff '.$commitHash.'~1..'.$commitHash));
         }
 
-        $diff = $this->parseDiff($logs);
-        $commit->setDiffs($diff);
-
-        return $commit;
-    }
-
-    public function getBranchDiff($baseBranch, $otherBranch)
-    {
-        $logs = $this->getClient()->run($this, 'diff ' . escapeshellarg("{$baseBranch}..{$otherBranch}"));
-        $logs = explode("\n", $logs);
-        $diff = $this->parseDiff($logs);
-        return $diff;
-    }
-
-    protected function parseDiff($logs)
-    {
-        $diffs = array();
-
         // Read diff logs
+        $lineNumOld = 0;
+        $lineNumNew = 0;
         foreach ($logs as $log) {
             if ('diff' === substr($log, 0, 4)) {
                 if (isset($diff)) {
@@ -392,20 +380,44 @@ class Repository
                 }
             }
 
-            $diff->addLine($log);
-        }
+            if (!empty($log)) {
+                switch ($log[0]) {
+                    case "@":
+                        // Set the line numbers
+                        preg_match('/@@ -([0-9]+)/', $log, $matches);
+                        $lineNumOld = $matches[1] - 1;
+                        $lineNumNew = $matches[1] - 1;
+                        break;
+                    case "-":
+                        $lineNumOld++;
+                        break;
+                    case "+":
+                        $lineNumNew++;
+                        break;
+                    default:
+                        $lineNumOld++;
+                        $lineNumNew++;
+                }
+            } else {
+                $lineNumOld++;
+                $lineNumNew++;
+            }
 
+            $diff->addLine($log, $lineNumOld, $lineNumNew);
+        }
 
         if (isset($diff)) {
             $diffs[] = $diff;
         }
 
-        return $diffs;
+        $commit->setDiffs($diffs);
+
+        return $commit;
     }
 
     public function getAuthorStatistics()
     {
-        $logs = $this->getClient()->run($this, 'log --pretty=format:\'%an||%ae\'');
+        $logs = $this->getClient()->run($this, 'log --pretty=format:\'%an||%ae\' ' . $this->getHead());
 
         if (empty($logs)) {
             throw new \RuntimeException('No statistics available');
@@ -417,9 +429,9 @@ class Repository
 
         foreach ($logs as $user => $count) {
             $user = explode('||', $user);
-            $data[] = array('name' => $user[0], 'email' => $user[1], 'commits' => $count); 
+            $data[] = array('name' => $user[0], 'email' => $user[1], 'commits' => $count);
         }
-        
+
         return $data;
     }
 
@@ -430,15 +442,29 @@ class Repository
      */
     public function getHead()
     {
-        $file = file_get_contents($this->getPath() . '/.git/HEAD');
+        if (file_exists($this->getPath() . '/.git/HEAD')) {
+          $file = @file_get_contents($this->getPath() . '/.git/HEAD');
+        } elseif (file_exists($this->getPath() . '/HEAD')) {
+          $file = @file_get_contents($this->getPath() . '/HEAD');
+        } else {
+          return 'master';
+        }
+        // Find first existing branch
         foreach (explode("\n", $file) as $line) {
             $m = array();
             if (preg_match('#ref:\srefs/heads/(.+)#', $line, $m)) {
-                return $m[1];
+                if ($this->hasBranch($m[1])) {
+                  return $m[1];
+                }
             }
         }
 
         // Default to something sane if in a detached HEAD state.
+        $branches = $this->getBranches();
+        if (!empty($branches)) {
+          return current($branches);
+        }
+
         return 'master';
     }
 
@@ -482,23 +508,52 @@ class Repository
     }
 
     /**
+     * Extract the tree hash for a given branch or tree reference
+     *
+     * @param  string $branch
+     * @return string
+     */
+    public function getBranchTree($branch)
+    {
+        $hash = $this->getClient()->run($this, "log --pretty='%T' --max-count=1 $branch");
+        $hash = trim($hash, "\r\n ");
+
+        return $hash ? : false;
+    }
+
+    /**
+     * Create a TAR or ZIP archive of a git tree
+     *
+     * @param string $tree   Tree-ish reference
+     * @param string $output Output File name
+     * @param string $format Archive format
+     */
+    public function createArchive($tree, $output, $format = 'zip')
+    {
+        $fs = new Filesystem;
+        $fs->mkdir(dirname($output));
+        $this->getClient()->run($this, "archive --format=$format --output=$output $tree");
+    }
+
+    /**
      * Get the Tree for the provided folder
-     * 
-     * @param string $tree Folder that will be parsed
-     * @return Tree Instance of Tree for the provided folder
+     *
+     * @param  string $tree Folder that will be parsed
+     * @return Tree   Instance of Tree for the provided folder
      */
     public function getTree($tree)
     {
         $tree = new Tree($tree, $this->getClient(), $this);
         $tree->parse();
+
         return $tree;
     }
 
     /**
      * Get the Blob for the provided file
-     * 
-     * @param string $blob File that will be parsed
-     * @return Blob Instance of Blob for the provided file
+     *
+     * @param  string $blob File that will be parsed
+     * @return Blob   Instance of Blob for the provided file
      */
     public function getBlob($blob)
     {
@@ -507,9 +562,9 @@ class Repository
 
     /**
      * Blames the provided file and parses the output
-     * 
-     * @param string $file File that will be blamed
-     * @return array Commits hashes containing the lines
+     *
+     * @param  string $file File that will be blamed
+     * @return array  Commits hashes containing the lines
      */
     public function getBlame($file)
     {
@@ -524,7 +579,7 @@ class Repository
                 continue;
             }
 
-            preg_match_all("/([a-zA-Z0-9^]{8})[\s]+(.+)[\s]+([0-9]+)\)(.+)/", $log, $match);
+            preg_match_all("/([a-zA-Z0-9^]{8})\s+.*?([0-9]+)\)(.+)/", $log, $match);
 
             $current_commit = $match[1][0];
             if ($current_commit != $previous_commit) {
@@ -532,7 +587,7 @@ class Repository
                 $blame[$i] = array('line' => '', 'commit' => $current_commit);
             }
 
-            $blame[$i]['line'] .= PHP_EOL . $match[4][0];
+            $blame[$i]['line'] .= PHP_EOL . $match[3][0];
             $previous_commit = $current_commit;
         }
 
@@ -541,7 +596,7 @@ class Repository
 
     /**
      * Get the current Repository path
-     * 
+     *
      * @return string Path where the repository is located
      */
     public function getPath()
@@ -551,7 +606,7 @@ class Repository
 
     /**
      * Set the current Repository path
-     * 
+     *
      * @param string $path Path where the repository is located
      */
     public function setPath($path)

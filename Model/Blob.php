@@ -1,10 +1,10 @@
 <?php
 
-namespace Git\Model;
+namespace GitList\Component\Git\Model;
 
-use Git\Client;
-use Git\Repository;
-use Git\ScopeAware;
+use GitList\Component\Git\Client;
+use GitList\Component\Git\Repository;
+use GitList\Component\Git\ScopeAware;
 
 class Blob extends ScopeAware
 {
@@ -13,7 +13,8 @@ class Blob extends ScopeAware
     protected $name;
     protected $size;
 
-    public function __construct($hash, Client $client, Repository $repository) {
+    public function __construct($hash, Client $client, Repository $repository)
+    {
         $this->setClient($client);
         $this->setRepository($repository);
         $this->setHash($hash);
@@ -22,6 +23,7 @@ class Blob extends ScopeAware
     public function output()
     {
         $data = $this->getClient()->run($this->getRepository(), 'show ' . $this->getHash());
+
         return $data;
     }
 

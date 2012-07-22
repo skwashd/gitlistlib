@@ -1,26 +1,24 @@
 <?php
 
-namespace Git;
+namespace GitList\Component\Git;
+
+use Silex\Application;
 
 class Client
 {
-    protected $app;
     protected $path;
+    protected $hidden;
 
-    /**
-     * Constructor
-     *
-     * @param string $client_path Path to the git binary.
-     */
-    public function __construct($client_path)
+    public function __construct($options = null)
     {
-        $this->setPath($client_path);
+        $this->setPath($options['path']);
+        $this->setHidden($options['hidden']);
     }
 
     /**
      * Creates a new repository on the specified path
      *
-     * @param string $path Path where the new repository will be created
+     * @param  string     $path Path where the new repository will be created
      * @return Repository Instance of Repository
      */
     public function createRepository($path)
@@ -30,13 +28,14 @@ class Client
         }
 
         $repository = new Repository($path, $this);
+
         return $repository->create();
     }
 
     /**
      * Opens a repository at the specified path
      *
-     * @param string $path Path where the repository is located
+     * @param  string     $path Path where the repository is located
      * @return Repository Instance of Repository
      */
     public function getRepository($path)
@@ -45,7 +44,7 @@ class Client
             throw new \RuntimeException('There is no GIT repository at ' . $path);
         }
 
-        if (in_array($path, $this->app['hidden'])) {
+        if (in_array($path, $this->getHidden())) {
             throw new \RuntimeException('You don\'t have access to this repository');
         }
 
@@ -55,8 +54,8 @@ class Client
     /**
      * Searches for valid repositories on the specified path
      *
-     * @param string $path Path where repositories will be searched
-     * @return array Found repositories, containing their name, path and description
+     * @param  string $path Path where repositories will be searched
+     * @return array  Found repositories, containing their name, path and description
      */
     public function getRepositories($path)
     {
@@ -86,28 +85,30 @@ class Client
                 continue;
             }
 
-            $isBare = file_exists($file->getPathname() . '/HEAD');
-            $isRepository = file_exists($file->getPathname() . '/.git/HEAD');
+            if ($file->isDir()) {
+                $isBare = file_exists($file->getPathname() . '/HEAD');
+                $isRepository = file_exists($file->getPathname() . '/.git/HEAD');
 
-            if ($file->isDir() && $isRepository || $isBare) {
-                if (in_array($file->getPathname(), $this->app['hidden'])) {
+                if ($isRepository || $isBare) {
+                    if (in_array($file->getPathname(), $this->getHidden())) {
+                        continue;
+                    }
+
+                    if ($isBare) {
+                        $description = $file->getPathname() . '/description';
+                    } else {
+                        $description = $file->getPathname() . '/.git/description';
+                    }
+
+                    if (file_exists($description)) {
+                        $description = file_get_contents($description);
+                    } else {
+                        $description = 'There is no repository description file. Please, create one to remove this message.';
+                    }
+
+                    $repositories[] = array('name' => $file->getFilename(), 'path' => $file->getPathname(), 'description' => $description);
                     continue;
                 }
-
-                if ($isBare) {
-                    $description = $file->getPathname() . '/description';
-                } else {
-                    $description = $file->getPathname() . '/.git/description';
-                }
-
-                if (file_exists($description)) {
-                    $description = file_get_contents($description);
-                } else {
-                    $description = 'There is no repository description file. Please, create one to remove this message.';
-                }
-
-                $repositories[] = array('name' => $file->getFilename(), 'path' => $file->getPathname(), 'description' => $description);
-                continue;
             }
         }
 
@@ -121,9 +122,9 @@ class Client
      * run git commands. Once the command has been run, the method will
      * return the command line output.
      *
-     * @param Repository $repository Repository where the command will be run
-     * @param string $command Git command to be run
-     * @return string Returns the command output
+     * @param  Repository $repository Repository where the command will be run
+     * @param  string     $command    Git command to be run
+     * @return string     Returns the command output
      */
     public function run(Repository $repository, $command)
     {
@@ -133,18 +134,19 @@ class Client
         if (!is_resource($process)) {
             throw new \RuntimeException('Unable to execute command: ' . $command);
         }
-        
+
         $stderr = stream_get_contents($pipes[2]);
         fclose($pipes[2]);
-        
+
         if (!empty($stderr)) {
             throw new \RuntimeException($stderr);
         }
-        
+
         $stdout = stream_get_contents($pipes[1]);
         fclose($pipes[1]);
 
         proc_close($process);
+
         return $stdout;
     }
 
@@ -166,5 +168,25 @@ class Client
     protected function setPath($path)
     {
         $this->path = $path;
+    }
+
+    /**
+     * Get hidden repository list
+     *
+     * @return array List of repositories to hide
+     */
+    protected function getHidden()
+    {
+        return $this->hidden;
+    }
+
+    /**
+     * Set the hidden repository list
+     *
+     * @param array $hidden List of repositories to hide
+     */
+    protected function setHidden($hidden)
+    {
+        $this->hidden = $hidden;
     }
 }

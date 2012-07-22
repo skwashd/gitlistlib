@@ -1,10 +1,6 @@
 <?php
 
-namespace Git\Model;
-
-use Git\Client;
-use Git\Repository;
-use Git\ScopeAware;
+namespace GitList\Component\Git\Model;
 
 class Symlink
 {
