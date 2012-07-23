@@ -211,7 +211,7 @@ class Repository
      */
     public function hasStagedChanges()
     {
-        return stripos($this->getClient()->run($this, 'status'), 'Changes to be committed') === FALSE;
+        return stripos($this->getClient()->run($this, 'status'), 'Changes to be committed') !== FALSE;
     }
 
     /**
