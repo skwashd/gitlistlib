@@ -1,6 +1,6 @@
 <?php
 
-namespace GitList\Component\Git;
+namespace Git;
 
 class ScopeAware
 {

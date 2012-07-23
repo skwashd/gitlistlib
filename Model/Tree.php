@@ -1,10 +1,10 @@
 <?php
 
-namespace GitList\Component\Git\Model;
+namespace Git\Model;
 
-use GitList\Component\Git\Client;
-use GitList\Component\Git\Repository;
-use GitList\Component\Git\ScopeAware;
+use Git\Client;
+use Git\Repository;
+use Git\ScopeAware;
 
 class Tree extends ScopeAware implements \RecursiveIterator
 {

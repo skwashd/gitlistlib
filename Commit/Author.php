@@ -1,6 +1,6 @@
 <?php
 
-namespace GitList\Component\Git\Commit;
+namespace Git\Commit;
 
 class Author
 {
