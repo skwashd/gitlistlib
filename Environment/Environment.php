@@ -37,7 +37,7 @@ abstract class Environment
     public function set($key, $value)
     {
         if (!in_array($key, $this->legal_variables)) {
-          throw new Exception\IllegalEnvironmentVariableException("'$key' is not a legal environment variable");
+          throw new \RuntimeException("'$key' is not a legal environment variable");
         }
         $this->variables[$key] = $value;
         return $this;
@@ -55,7 +55,7 @@ abstract class Environment
     public function setAll(array $variables)
     {
         foreach ($variables as $key => $value) {
-            $this->variables[$key] = $value;
+            $this->set($key, $value);
         }
         return $this;
     }
