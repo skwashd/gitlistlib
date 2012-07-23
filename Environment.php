@@ -1,6 +1,6 @@
 <?php
 
-namespace Git;
+namespace Git\Environment;
 
 /**
  * Represents a set of Environment variables for use with git commands
@@ -31,7 +31,7 @@ abstract class Environment
      * @param $value string
      *  The value of the Environment variable.
      *
-     * @return Environment
+     * @return Git\Environment\Environment
      *  Returns $this for command chaining
      */
     public function set($key, $value)
@@ -49,7 +49,7 @@ abstract class Environment
      * @param $variables array
      *  An array of Environment variables to set (key => value).
      *
-     * @return Environment
+     * @return Git\Environment\Environment
      *  Returns $this for command chaining
      */
     public function setAll(array $variables)
@@ -92,7 +92,7 @@ abstract class Environment
      * @param $key string
      *  The variable to clear.
      *
-     * @return Environment
+     * @return Git\Environment\Environment
      *  Returns $this for command chaining
      */
     public function clear($key)
@@ -110,7 +110,7 @@ abstract class Environment
      *  An array of the keys to clear.
      *  If not provided, or set to FALSE | NULL then all the variables will be cleared.
      *
-     * @return Environment
+     * @return Git\Environment\Environment
      *  Returns $this for command chaining
      */
     public function clearAll($keys = NULL) {

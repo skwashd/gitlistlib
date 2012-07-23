@@ -1,6 +1,6 @@
 <?php
 
-namespace Git;
+namespace Git\Environment;
 
 /**
  * Represents a set of Environment variables for use with git commands
