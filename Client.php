@@ -39,12 +39,12 @@ class Client
     /**
      * Opens a repository at the specified path
      *
-     * @param  string     $path Path where the repository is located
+     * @param  string     $path Path where the repository is located relative to the current working dir.
      * @return Repository Instance of Repository
      */
     public function getRepository($path)
     {
-        $path = '/' . trim($path, '/');
+        $path = realpath($path);
         if (!file_exists($path)) {
             throw new \RuntimeException("Path '$path' does not exist");
         }
@@ -168,7 +168,8 @@ class Client
      *
      * This method will start a new process on the current machine and
      * run git commands. Once the command has been run, the method will
-     * return the command line output.
+     * return the command line output. The working directory the command
+     * executes from is the root path of the $repository.
      *
      * @param  Repository $repository Repository where the command will be run
      * @param  string     $command    Git command to be run
