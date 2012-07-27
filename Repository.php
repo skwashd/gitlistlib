@@ -205,13 +205,23 @@ class Repository
     }
 
     /**
-     * Simply returns the output of git status.
+     * Returns whether this repo has staged changes.
      *
      * @return bool
      */
     public function hasStagedChanges()
     {
         return stripos($this->getClient()->run($this, 'status'), 'Changes to be committed') !== FALSE;
+    }
+
+    /**
+     * Returns whether this repo is ahead of it's origin.
+     *
+     * @return bool
+     */
+    public function isAhead()
+    {
+        return stripos($this->getClient()->run($this, 'status'), 'Your branch is ahead') !== FALSE;
     }
 
     /**
