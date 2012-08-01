@@ -190,13 +190,10 @@ class Client
         $stderr = stream_get_contents($pipes[2]);
         $stdout = stream_get_contents($pipes[1]);
 
-        $status = proc_get_status($process);
-        $exit = $status['exitcode'];
-
         fclose($pipes[2]);
         fclose($pipes[1]);
         fclose($pipes[0]);
-        proc_close($process);
+        $exit = proc_close($process);
 
         if (0 !== $exit) {
             throw new \RuntimeException("Error running command $prepared_command\n" . ($stderr ?: $stdout), $exit);
