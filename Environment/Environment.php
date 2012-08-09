@@ -5,7 +5,7 @@ namespace Git\Environment;
 /**
  * Represents a set of Environment variables for use with git commands
  */
-abstract class Environment
+class Environment
 {
     protected $variables;
     protected $legal_variables = array();
@@ -36,9 +36,6 @@ abstract class Environment
      */
     public function set($key, $value)
     {
-        if (!in_array($key, $this->legal_variables)) {
-          throw new \RuntimeException("'$key' is not a legal environment variable");
-        }
         $this->variables[$key] = $value;
         return $this;
     }

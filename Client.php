@@ -16,7 +16,7 @@ class Client
         $this->setPath($options['path']);
         $this->setHidden($options['hidden']);
         $this->git_environment = new Environment\GitEnvironment();
-        $this->shell_environment = new Environment\ShellEnvironment();
+        $this->shell_environment = new Environment\Environment();
     }
 
     /**
@@ -235,7 +235,7 @@ class Client
     /**
      * Returns the client's git Environment.
      *
-     * @return Git\Environment\ShellEnvironment
+     * @return Git\Environment\Environment
      *  The client's git Environment object.
      */
     public function getShellEnvironment()

@@ -31,4 +31,24 @@ class GitEnvironment extends Environment
         'GIT_FLUSH',
         'GIT_TRACE',
     );
+
+    /**
+     * Sets the value of a single variable in the Environment.
+     *
+     * @param $key string
+     *  The name of the Environment variable.
+     *
+     * @param $value string
+     *  The value of the Environment variable.
+     *
+     * @return Git\Environment\Environment
+     *  Returns $this for command chaining
+     */
+    public function set($key, $value)
+    {
+        if (!in_array($key, $this->legal_variables)) {
+          throw new \RuntimeException("'$key' is not a legal environment variable");
+        }
+        return parent::set($key, $value);
+    }
 }
